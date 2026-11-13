@@ -1,8 +1,19 @@
 import { useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import axios from "axios";
 import "./App.css";
 
 const API_URL = "http://localhost:5000/api/meetings";
+
+const getAuthConfig = () => {
+  const token = localStorage.getItem("token");
+
+  return {
+    headers: {
+      Authorization: `Bearer ${token}`
+    }
+  };
+};
 
 const initialForm = {
   title: "",
@@ -16,6 +27,8 @@ const initialForm = {
 };
 
 function App() {
+  const navigate = useNavigate();
+
   const [meetings, setMeetings] = useState([]);
   const [formData, setFormData] = useState(initialForm);
 
@@ -77,7 +90,10 @@ function App() {
 
   const fetchMeetings = async () => {
     try {
-      const response = await axios.get(API_URL);
+      const response = await axios.get(
+        API_URL,
+        getAuthConfig()
+      );
 
       if (response.data.success) {
         setMeetings(response.data.data);
@@ -86,6 +102,14 @@ function App() {
       }
     } catch (err) {
       console.error(err);
+
+      if (err.response?.status === 401) {
+        localStorage.removeItem("token");
+        localStorage.removeItem("user");
+        navigate("/", { replace: true });
+        return;
+      }
+
       setError("Unable to load meetings.");
     }
   };
@@ -93,6 +117,17 @@ function App() {
   useEffect(() => {
     fetchMeetings();
   }, []);
+
+  // ==========================================
+  // LOGOUT
+  // ==========================================
+
+  const handleLogout = () => {
+    localStorage.removeItem("token");
+    localStorage.removeItem("user");
+
+    navigate("/");
+  };
 
   // ==========================================
   // HANDLE INPUT CHANGE
@@ -380,6 +415,10 @@ function App() {
     // DATA TO SEND TO BACKEND
     // ------------------------------------------
 
+    console.log("Time entered:", formData.time);
+    console.log("Period:", formData.period);
+    console.log("Time sent to backend:", finalTime);
+
     const meetingData = {
       title,
       date: formData.date,
@@ -397,13 +436,18 @@ function App() {
         // UPDATE
         await axios.put(
           `${API_URL}/${editingId}`,
-          meetingData
+          meetingData,
+          getAuthConfig()
         );
 
         setMessage("Meeting updated successfully.");
       } else {
         // CREATE
-        await axios.post(API_URL, meetingData);
+        await axios.post(
+          API_URL,
+          meetingData,
+          getAuthConfig()
+        );
 
         setMessage("Meeting created successfully.");
       }
@@ -424,6 +468,13 @@ function App() {
       });
     } catch (err) {
       console.error(err);
+
+      if (err.response?.status === 401) {
+        localStorage.removeItem("token");
+        localStorage.removeItem("user");
+        navigate("/", { replace: true });
+        return;
+      }
 
       const backendMessage =
         err.response?.data?.message ||
@@ -491,7 +542,10 @@ function App() {
     }
 
     try {
-      await axios.delete(`${API_URL}/${id}`);
+      await axios.delete(
+        `${API_URL}/${id}`,
+        getAuthConfig()
+      );
 
       setMessage("Meeting deleted successfully.");
       setError("");
@@ -504,6 +558,13 @@ function App() {
       });
     } catch (err) {
       console.error(err);
+
+      if (err.response?.status === 401) {
+        localStorage.removeItem("token");
+        localStorage.removeItem("user");
+        navigate("/", { replace: true });
+        return;
+      }
 
       setError("Unable to delete meeting.");
     }
@@ -548,6 +609,23 @@ function App() {
     });
 
   // ==========================================
+  // PAST MEETINGS
+  //
+  // Shows meetings before today's date.
+  // Past meetings are NOT deleted.
+  // ==========================================
+
+  const pastMeetings = meetings
+    .filter((meeting) => meeting.date < today)
+    .sort((a, b) => {
+      const dateA = `${a.date} ${a.time || ""}`;
+      const dateB = `${b.date} ${b.time || ""}`;
+
+      // Newest past meeting first
+      return dateB.localeCompare(dateA);
+    });
+
+  // ==========================================
   // FILTER UPCOMING MEETINGS
   // ==========================================
 
@@ -589,6 +667,7 @@ function App() {
       ====================================== */}
 
       <header className="header">
+
         <div>
           <h1>Meeting Management</h1>
 
@@ -597,14 +676,27 @@ function App() {
           </p>
         </div>
 
-        <div className="header-date">
-          {new Date().toLocaleDateString("en-IN", {
-            weekday: "long",
-            day: "2-digit",
-            month: "long",
-            year: "numeric",
-          })}
+        <div className="header-right">
+
+          <div className="header-date">
+            {new Date().toLocaleDateString("en-IN", {
+              weekday: "long",
+              day: "2-digit",
+              month: "long",
+              year: "numeric",
+            })}
+          </div>
+
+          <button
+            type="button"
+            className="logout-btn"
+            onClick={handleLogout}
+          >
+            Logout
+          </button>
+
         </div>
+
       </header>
 
       {/* ======================================
@@ -1031,6 +1123,57 @@ function App() {
             <div className="meeting-grid">
 
               {filteredMeetings.map((meeting) => (
+                <MeetingCard
+                  key={meeting._id}
+                  meeting={meeting}
+                  onEdit={handleEdit}
+                  onDelete={handleDelete}
+                  formatDate={formatDate}
+                  formatTime={formatTime}
+                />
+              ))}
+
+            </div>
+
+          )}
+
+        </section>
+
+        {/* ======================================
+            PAST MEETINGS
+        ====================================== */}
+
+        <section className="meetings-section">
+
+          <div className="section-title">
+
+            <div>
+              <h2>
+                Past Meetings
+              </h2>
+
+              <p>
+                Previous meetings
+              </p>
+            </div>
+
+            <div className="count">
+              {pastMeetings.length}
+            </div>
+
+          </div>
+
+          {pastMeetings.length === 0 ? (
+
+            <div className="empty">
+              No past meetings.
+            </div>
+
+          ) : (
+
+            <div className="meeting-grid">
+
+              {pastMeetings.map((meeting) => (
                 <MeetingCard
                   key={meeting._id}
                   meeting={meeting}

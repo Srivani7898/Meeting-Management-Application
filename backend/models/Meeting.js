@@ -2,7 +2,7 @@ const mongoose = require("mongoose");
 
 const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const titleRegex = /^[A-Za-z\s]+$/;
-const timeRegex = /^(0[1-9]|1[0-2]):[0-5][0-9]$/;
+const timeRegex = /^(?:[01]\d|2[0-3]):[0-5][0-9]$/;
 const urlRegex = /^https?:\/\/[^\s]+$/;
 
 const meetingSchema = new mongoose.Schema(

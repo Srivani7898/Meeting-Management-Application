@@ -8,16 +8,18 @@ const {
   deleteMeeting
 } = require("../controllers/meetingController");
 
+const protect = require("../middleware/authMiddleware");
+
 const router = express.Router();
 
-router.post("/", createMeeting);
+router.post("/", protect, createMeeting);
 
-router.get("/", getMeetings);
+router.get("/", protect, getMeetings);
 
-router.get("/:id", getMeeting);
+router.get("/:id", protect, getMeeting);
 
-router.put("/:id", updateMeeting);
+router.put("/:id", protect, updateMeeting);
 
-router.delete("/:id", deleteMeeting);
+router.delete("/:id", protect, deleteMeeting);
 
 module.exports = router;

@@ -4,6 +4,7 @@ require("dotenv").config();
 
 const connectDB = require("./config/db");
 const meetingRoutes = require("./routes/meetingRoutes");
+const authRoutes = require("./routes/authRoutes");
 
 const app = express();
 
@@ -11,6 +12,7 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 app.use("/api/meetings", meetingRoutes);
+app.use("/api/auth", authRoutes);
 
 // Connect to MongoDB
 connectDB();
